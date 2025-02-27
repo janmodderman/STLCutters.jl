@@ -49,9 +49,9 @@ end
 
 get_bounding_box(a::STLGeometry) = get_bounding_box( get_stl(a) )
 
-struct STLEmbeddedDiscretization <: Interfaces.AbstractEmbeddedDiscretization
-  cut::EmbeddedDiscretization
-  cutfacets::EmbeddedFacetDiscretization
+struct STLEmbeddedDiscretization{Dc,Dfc,Dp,T} <: Interfaces.AbstractEmbeddedDiscretization{Dc,Dp}
+  cut::EmbeddedDiscretization{Dc,T}
+  cutfacets::EmbeddedFacetDiscretization{Dfc,Dp,T}
 end
 
 function get_background_model(cut::STLEmbeddedDiscretization)
@@ -89,6 +89,10 @@ end
 
 function Triangulation(cut::STLEmbeddedDiscretization,args...)
   Triangulation(cut.cut,args...)
+end
+
+function BoundaryTriangulation(cut::STLEmbeddedDiscretization,args...;kwargs...)
+  BoundaryTriangulation(cut.cutfacets,args...;kwargs...)
 end
 
 function compute_subcell_to_inout(

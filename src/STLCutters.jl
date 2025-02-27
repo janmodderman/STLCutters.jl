@@ -27,8 +27,8 @@ using Gridap.ReferenceFEs: get_graph
 using Gridap.ReferenceFEs: get_metadata
 using Gridap.ReferenceFEs: isactive
 using Gridap.ReferenceFEs: point_eltype
-using GridapEmbedded.Distributed: consistent_bgcell_to_inoutcut!
-using GridapEmbedded.Distributed: consistent_bgfacet_to_inoutcut!
+# using GridapEmbedded.Distributed: consistent_bgcell_to_inoutcut!
+# using GridapEmbedded.Distributed: consistent_bgfacet_to_inoutcut!
 using GridapEmbedded.Distributed: DistributedEmbeddedDiscretization
 using GridapEmbedded.Distributed: AbstractEmbeddedDiscretization
 using GridapDistributed: DistributedDiscreteModel
@@ -65,6 +65,7 @@ import Gridap.Geometry: num_cells
 import Gridap.Geometry: get_cell_vertices
 import Gridap.Geometry: get_polytopes
 import Gridap.Geometry: Triangulation
+import Gridap.Geometry: BoundaryTriangulation
 
 import GridapEmbedded.Interfaces: cut
 import GridapEmbedded.Interfaces: cut_facets
@@ -75,15 +76,12 @@ import GridapEmbedded.Interfaces: compute_bgfacet_to_inoutcut
 import GridapEmbedded.Interfaces: compute_subcell_to_inout
 import GridapEmbedded.Interfaces: EmbeddedBoundary
 import GridapEmbedded.Interfaces: GhostSkeleton
-import GridapEmbedded.Interfaces: cut_facets
-import GridapEmbedded.Interfaces: cut_facets
 import GridapEmbedded.CSG: get_tree
 import GridapEmbedded.CSG: compatible_geometries
 import GridapEmbedded.CSG: similar_geometry
 import GridapEmbedded.AgFEM: aggregate
 import GridapEmbedded.Distributed: change_bgmodel
-import GridapEmbedded.Distributed: get_ls_to_bgcell_to_inoutcut
-import GridapEmbedded.Distributed: get_ls_to_bgfacet_to_inoutcut
+import GridapEmbedded.Distributed: isconsistent_bgcell_to_inoutcut
 import GridapEmbedded.Distributed: remove_ghost_subfacets
 import GridapEmbedded.Distributed: distributed_aggregate
 
