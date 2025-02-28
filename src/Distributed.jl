@@ -143,10 +143,10 @@ function cut(cutter::Cutter,bgmodel::DistributedDiscreteModel{Dc},args...) where
     cut.cut
   end  
   @notimplementedif !isconsistent_bgcell_to_inoutcut(_cuts,partition(gids))
-  _cutfacets = map(local_views(cuts)) do cut
-    cut.cutfacets 
-  end
-  @notimplementedif !isconsistent_bgcell_to_inoutcut(_cutfacets,partition(gids)) 
+  # _cutfacets = map(local_views(cuts)) do cut
+  #   cut.cutfacets 
+  # end
+  # @notimplementedif !isconsistent_bgcell_to_inoutcut(_cutfacets,partition(gids)) 
   DistributedEmbeddedDiscretization(cuts,bgmodel)
 end
 
