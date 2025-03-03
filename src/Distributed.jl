@@ -3,105 +3,105 @@ function cut(bgmodel::DistributedDiscreteModel,geo::STLGeometry,args...)
   cut(STLCutter(),bgmodel,geo,args...)
 end
 
-# function cut(cutter::STLCutter,bgmodel::DistributedDiscreteModel,args...)
-#   D = map(num_dims,local_views(bgmodel)) |> PartitionedArrays.getany
-#   timers,cutter = setup_distributed_cutter(cutter,bgmodel)
-#   cell_gids = get_cell_gids(bgmodel)
-#   facet_gids = get_face_gids(bgmodel,D-1)
+function cut(cutter::STLCutter,bgmodel::DistributedDiscreteModel,args...)
+  D = map(num_dims,local_views(bgmodel)) |> PartitionedArrays.getany
+  timers,cutter = setup_distributed_cutter(cutter,bgmodel)
+  cell_gids = get_cell_gids(bgmodel)
+  facet_gids = get_face_gids(bgmodel,D-1)
 
-#   tic!(timers["global"],barrier=true)
-#   bcells = map(compute_boundary_cells,local_views(bgmodel),local_views(cell_gids))
-#   icells = map(compute_interior_cells,local_views(bgmodel),local_views(cell_gids))
+  tic!(timers["global"],barrier=true)
+  bcells = map(compute_boundary_cells,local_views(bgmodel),local_views(cell_gids))
+  icells = map(compute_interior_cells,local_views(bgmodel),local_views(cell_gids))
 
-#   # Setup cutters
-#   tic!(timers["fine"],barrier=true)
-#   cell_to_facets = map(local_views(bgmodel)) do bgmodel
-#     compute_cell_to_facets(bgmodel,args...)
-#   end
-#   toc!(timers["fine"],"setup")
+  # Setup cutters
+  tic!(timers["fine"],barrier=true)
+  cell_to_facets = map(local_views(bgmodel)) do bgmodel
+    compute_cell_to_facets(bgmodel,args...)
+  end
+  toc!(timers["fine"],"setup")
 
-#   # Cut touched parts (only boundary cells)
-#   tic!(timers["fine"],barrier=true)
-#   cuts = map(
-#     local_views(bgmodel),
-#     local_views(facet_gids),
-#     bcells,
-#     cell_to_facets) do bgmodel,facet_gids,bcells,cell_to_facets
+  # Cut touched parts (only boundary cells)
+  tic!(timers["fine"],barrier=true)
+  cuts = map(
+    local_views(bgmodel),
+    local_views(facet_gids),
+    bcells,
+    cell_to_facets) do bgmodel,facet_gids,bcells,cell_to_facets
 
-#     ownmodel = DiscreteModelPortion(bgmodel,bcells)
-#     cell_to_pcell = get_cell_to_parent_cell(ownmodel)
-#     facet_to_pfacet = get_face_to_parent_face(ownmodel,D-1)
-#     cell_to_facets = lazy_map(Reindex(cell_to_facets),bcells)
-#     _cutter = STLCutter(;cell_to_facets,cutter.options...)
-#     cutgeo = cut(_cutter,ownmodel,args...)
-#     cutgeo = change_bgmodel(cutgeo,bgmodel,cell_to_pcell,facet_to_pfacet)
-#     remove_ghost_subfacets(cutgeo,facet_gids)
-#   end
-#   toc!(timers["fine"],"interface")
+    ownmodel = DiscreteModelPortion(bgmodel,bcells)
+    cell_to_pcell = get_cell_to_parent_cell(ownmodel)
+    facet_to_pfacet = get_face_to_parent_face(ownmodel,D-1)
+    cell_to_facets = lazy_map(Reindex(cell_to_facets),bcells)
+    _cutter = STLCutter(;cell_to_facets,cutter.options...)
+    cutgeo = cut(_cutter,ownmodel,args...)
+    cutgeo = change_bgmodel(cutgeo,bgmodel,cell_to_pcell,facet_to_pfacet)
+    remove_ghost_subfacets(cutgeo,facet_gids)
+  end
+  toc!(timers["fine"],"interface")
 
-#   # Setup coarse inout and graph
-#   facet_to_inoutcut = map(compute_bgfacet_to_inoutcut,cuts)
-#   facet_neighbors = map(compute_facet_neighbors,
-#     local_views(bgmodel),local_views(cell_gids))
-#   facet_neighbor_to_ioc = map(compute_facet_neighbor_to_inoutcut,
-#     local_views(bgmodel),local_views(cell_gids),facet_to_inoutcut,facet_neighbors)
+  # Setup coarse inout and graph
+  facet_to_inoutcut = map(compute_bgfacet_to_inoutcut,cuts)
+  facet_neighbors = map(compute_facet_neighbors,
+    local_views(bgmodel),local_views(cell_gids))
+  facet_neighbor_to_ioc = map(compute_facet_neighbor_to_inoutcut,
+    local_views(bgmodel),local_views(cell_gids),facet_to_inoutcut,facet_neighbors)
 
-#   # Gathers
-#   root = find_root_part(cuts,bcells)
-#   part_to_parts = gather(facet_neighbors,destination=root)
-#   part_to_lpart_to_ioc = gather(facet_neighbor_to_ioc,destination=root)
+  # Gathers
+  root = find_root_part(cuts,bcells)
+  part_to_parts = gather(facet_neighbors,destination=root)
+  part_to_lpart_to_ioc = gather(facet_neighbor_to_ioc,destination=root)
 
-#   # Propagate at coarse level (and complete intersections)
-#   tic!(timers["coarse"],barrier=true)
-#   tic!(timers["fine"],barrier=true)
-#   part_to_ioc = map(
-#       part_to_parts,
-#       part_to_lpart_to_ioc,
-#       local_views(cell_gids)) do part_to_parts,part_to_lpart_to_ioc,ids
+  # Propagate at coarse level (and complete intersections)
+  tic!(timers["coarse"],barrier=true)
+  tic!(timers["fine"],barrier=true)
+  part_to_ioc = map(
+      part_to_parts,
+      part_to_lpart_to_ioc,
+      local_views(cell_gids)) do part_to_parts,part_to_lpart_to_ioc,ids
 
-#     part = part_id(ids)
-#     if part == root
-#       propagate_inout(part_to_parts,part_to_lpart_to_ioc)
-#     else
-#       Int8[]
-#     end
-#   end
-#   toc!(timers["coarse"],"coarse")
+    part = part_id(ids)
+    if part == root
+      propagate_inout(part_to_parts,part_to_lpart_to_ioc)
+    else
+      Int8[]
+    end
+  end
+  toc!(timers["coarse"],"coarse")
 
-#   # Complete cut (interior cells)
-#   icuts = map(
-#     local_views(bgmodel),
-#     local_views(facet_gids),
-#     icells,
-#     cell_to_facets) do bgmodel,facet_gids,icells,cell_to_facets
+  # Complete cut (interior cells)
+  icuts = map(
+    local_views(bgmodel),
+    local_views(facet_gids),
+    icells,
+    cell_to_facets) do bgmodel,facet_gids,icells,cell_to_facets
 
-#     ownmodel = DiscreteModelPortion(bgmodel,icells)
-#     cell_to_pcell = get_cell_to_parent_cell(ownmodel)
-#     facet_to_pfacet = get_face_to_parent_face(ownmodel,D-1)
-#     cell_to_facets = lazy_map(Reindex(cell_to_facets),icells)
-#     _cutter = STLCutter(;cell_to_facets,cutter.options...)
-#     cutgeo = cut(_cutter,ownmodel,args...)
-#     cutgeo = change_bgmodel(cutgeo,bgmodel,cell_to_pcell,facet_to_pfacet)
-#     remove_ghost_subfacets(cutgeo,facet_gids)
-#   end
-#   toc!(timers["fine"],"interior")
+    ownmodel = DiscreteModelPortion(bgmodel,icells)
+    cell_to_pcell = get_cell_to_parent_cell(ownmodel)
+    facet_to_pfacet = get_face_to_parent_face(ownmodel,D-1)
+    cell_to_facets = lazy_map(Reindex(cell_to_facets),icells)
+    _cutter = STLCutter(;cell_to_facets,cutter.options...)
+    cutgeo = cut(_cutter,ownmodel,args...)
+    cutgeo = change_bgmodel(cutgeo,bgmodel,cell_to_pcell,facet_to_pfacet)
+    remove_ghost_subfacets(cutgeo,facet_gids)
+  end
+  toc!(timers["fine"],"interior")
 
-#  # Merge discretizations
-#   cuts = map(cuts,icuts,bcells,icells) do bcut,icut,bcells,icells
-#     complete_in_or_out!(bcut,icut,bcells,icells)
-#     merge(bcut,icut,bcells,icells)
-#   end
+ # Merge discretizations
+  cuts = map(cuts,icuts,bcells,icells) do bcut,icut,bcells,icells
+    complete_in_or_out!(bcut,icut,bcells,icells)
+    merge(bcut,icut,bcells,icells)
+  end
 
-#   # Scatter
-#   part_ioc = scatter(part_to_ioc,source=root)
+  # Scatter
+  part_ioc = scatter(part_to_ioc,source=root)
 
-#   # Set undefined parts
-#   map(cuts,part_ioc,cell_gids.partition) do cut,ioc,ids
-#     own_cells = own_to_local(ids)
-#     if !istouched(cut,own_cells)
-#       set_in_or_out!(cut,ioc)
-#     end
-#   end
+  # Set undefined parts
+  map(cuts,part_ioc,cell_gids.partition) do cut,ioc,ids
+    own_cells = own_to_local(ids)
+    if !istouched(cut,own_cells)
+      set_in_or_out!(cut,ioc)
+    end
+  end
 
 #   # Nearest neighbor communication
 #   # _cuts = map(local_views(cuts)) do cut
@@ -126,29 +126,29 @@ end
 #   # @notimplementedif !isconsistent_bgcell_to_inoutcut(_cutfacets,partition(facet_gids))
 
 #   # @notimplementedif !isconsistent_bgcell_to_inoutcut(cuts,partition(facet_gids))
-#   toc!(timers["global"],"global")
-#   DistributedEmbeddedDiscretization(cuts,bgmodel)
-# end
-
-function cut(cutter::Cutter,bgmodel::DistributedDiscreteModel{Dc},args...) where Dc
-  gids = get_face_gids(bgmodel,Dc)
-  cuts = map(local_views(bgmodel)) do bgmodel
-    cut(cutter,bgmodel,args...)
-  end
-  # map(local_views(cuts)) do cut
-  #   println(cut.cut.ls_to_bgcell_to_inoutcut)
-  #   println(cut.cutfacets.ls_to_facet_to_inoutcut)
-  # end
-  _cuts = map(local_views(cuts)) do cut
-    cut.cut
-  end  
-  @notimplementedif !isconsistent_bgcell_to_inoutcut(_cuts,partition(gids))
-  # _cutfacets = map(local_views(cuts)) do cut
-  #   cut.cutfacets 
-  # end
-  # @notimplementedif !isconsistent_bgcell_to_inoutcut(_cutfacets,partition(gids)) 
+  toc!(timers["global"],"global")
   DistributedEmbeddedDiscretization(cuts,bgmodel)
 end
+
+# function cut(cutter::Cutter,bgmodel::DistributedDiscreteModel{Dc},args...) where Dc
+#   gids = get_face_gids(bgmodel,Dc)
+#   cuts = map(local_views(bgmodel)) do bgmodel
+#     cut(cutter,bgmodel,args...)
+#   end
+#   # map(local_views(cuts)) do cut
+#   #   println(cut.cut.ls_to_bgcell_to_inoutcut)
+#   #   println(cut.cutfacets.ls_to_facet_to_inoutcut)
+#   # end
+#   _cuts = map(local_views(cuts)) do cut
+#     cut.cut
+#   end  
+#   @notimplementedif !isconsistent_bgcell_to_inoutcut(_cuts,partition(gids))
+#   # _cutfacets = map(local_views(cuts)) do cut
+#   #   cut.cutfacets 
+#   # end
+#   # @notimplementedif !isconsistent_bgcell_to_inoutcut(_cutfacets,partition(gids)) 
+#   DistributedEmbeddedDiscretization(cuts,bgmodel)
+# end
 
 function setup_distributed_cutter(a::STLCutter,bgmodel::DistributedDiscreteModel)
   parts = map(part_id,get_cell_gids(bgmodel).partition)
