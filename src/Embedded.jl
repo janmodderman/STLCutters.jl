@@ -156,6 +156,10 @@ function cut(background::DiscreteModel,geom::STLGeometry)
   cut(cutter,background,geom)
 end
 
+function cut(cutter::STLCutter,background::AdaptedDiscreteModel,geom::STLGeometry)
+  cut(cutter,get_model(background),geom)
+end 
+
 function cut_facets(cutter::STLCutter,background::DiscreteModel,geom::STLGeometry)
   cutgeo = cut(background,geom;cutter.options...)
   cut_facets(cutgeo)
@@ -169,6 +173,10 @@ end
 function cut_facets(cut::STLEmbeddedDiscretization,args...)
   cut.cutfacets
 end
+
+function cut_facets(cutter::STLCutter,background::AdaptedDiscreteModel,geom::STLGeometry)
+  cut_facets(cutter,get_model(background),geom)
+end 
 
 function aggregate(strategy,cut::STLEmbeddedDiscretization)
   aggregate(strategy,cut,cut.cut.geo)
