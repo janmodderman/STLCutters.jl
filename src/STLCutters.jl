@@ -9,6 +9,7 @@ using Gridap.Geometry
 using Gridap.Fields
 using Gridap.Helpers
 using Gridap.ReferenceFEs
+using Gridap.Adaptivity
 using GridapEmbedded
 using GridapEmbedded.CSG
 using GridapEmbedded.Interfaces
