@@ -96,7 +96,7 @@ function cut(cutter::STLCutter,bgmodel::DistributedDiscreteModel,args...)
   part_ioc = scatter(part_to_ioc,source=root)
 
   # Set undefined parts
-  map(cuts,part_ioc,cell_gids.partition) do cut,ioc,ids
+  map(cuts,part_ioc,partition(cell_gids)) do cut,ioc,ids
     own_cells = own_to_local(ids)
     if !istouched(cut,own_cells)
       set_in_or_out!(cut,ioc)
@@ -727,4 +727,44 @@ function distributed_aggregate(
 
   facet_to_inoutcut = compute_bgfacet_to_inoutcut(cut,geo)
   GridapEmbedded.Distributed._distributed_aggregate_by_threshold(strategy.threshold,cut,geo,in_or_out,facet_to_inoutcut)
+end
+
+# Stuff brough over from GridapEmbedded.Distributed
+
+function consistent_bgcell_to_inoutcut!(
+  cuts::AbstractArray{<:AbstractEmbeddedDiscretization},
+  gids::PRange)
+
+  ls_to_bgcell_to_inoutcut = map(get_ls_to_bgcell_to_inoutcut,cuts)
+  _consistent!(ls_to_bgcell_to_inoutcut,gids)
+end
+
+function get_ls_to_bgcell_to_inoutcut(cut::EmbeddedDiscretization)
+  cut.ls_to_bgcell_to_inoutcut
+end
+
+function consistent_bgfacet_to_inoutcut!(
+  cuts::AbstractArray{<:AbstractEmbeddedDiscretization},
+  gids::PRange)
+
+  ls_to_bgfacet_to_inoutcut = map(get_ls_to_bgfacet_to_inoutcut,cuts)
+  _consistent!(ls_to_bgfacet_to_inoutcut,gids)
+end
+
+function get_ls_to_bgfacet_to_inoutcut(cut::EmbeddedFacetDiscretization)
+  cut.ls_to_facet_to_inoutcut
+end
+
+function _consistent!(
+  p_to_i_to_a::AbstractArray{<:Vector{<:Vector}},
+  prange::PRange)
+
+  n = map(length,p_to_i_to_a) |> PartitionedArrays.getany
+  for i in 1:n
+    p_to_a = map(i_to_a->i_to_a[i],p_to_i_to_a)
+    PVector(p_to_a,partition(prange)) |> consistent! |> wait
+    map(p_to_a,p_to_i_to_a) do p_to_a,p_to_ia
+      copyto!(p_to_ia[i],p_to_a)
+    end
+  end
 end

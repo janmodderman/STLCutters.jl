@@ -27,8 +27,6 @@ using Gridap.ReferenceFEs: get_graph
 using Gridap.ReferenceFEs: get_metadata
 using Gridap.ReferenceFEs: isactive
 using Gridap.ReferenceFEs: point_eltype
-using GridapEmbedded.Distributed: consistent_bgcell_to_inoutcut!
-using GridapEmbedded.Distributed: consistent_bgfacet_to_inoutcut!
 using GridapEmbedded.Distributed: DistributedEmbeddedDiscretization
 using GridapEmbedded.Distributed: AbstractEmbeddedDiscretization
 using GridapDistributed: DistributedDiscreteModel
@@ -82,11 +80,8 @@ import GridapEmbedded.CSG: compatible_geometries
 import GridapEmbedded.CSG: similar_geometry
 import GridapEmbedded.AgFEM: aggregate
 import GridapEmbedded.Distributed: change_bgmodel
-import GridapEmbedded.Distributed: get_ls_to_bgcell_to_inoutcut
-import GridapEmbedded.Distributed: get_ls_to_bgfacet_to_inoutcut
 import GridapEmbedded.Distributed: remove_ghost_subfacets
 import GridapEmbedded.Distributed: distributed_aggregate
-
 
 import Base: split
 
